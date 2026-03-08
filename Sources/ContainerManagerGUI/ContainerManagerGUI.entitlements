@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Required for Virtualization.framework -->
+    <key>com.apple.security.virtualization</key>
+    <true/>
+    <!-- Required for vmnet networking (macOS 26+) -->
+    <key>com.apple.vm.networking</key>
+    <true/>
+    <!-- Hypervisor framework access -->
+    <key>com.apple.security.hypervisor</key>
+    <true/>
+    <!-- Device access for virtio -->
+    <key>com.apple.security.device.audio-input</key>
+    <false/>
+    <!-- App sandbox disabled — this is a privileged system tool -->
+    <key>com.apple.security.app-sandbox</key>
+    <false/>
+    <!-- Network client access for image pulling -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+    <!-- File access for kernel, images, containers -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+    <!-- Read all volumes for bind mounts -->
+    <key>com.apple.security.files.all</key>
+    <true/>
+</dict>
+</plist>

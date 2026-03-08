@@ -34,6 +34,7 @@ let package = Package(
         .library(name: "ContainerizationExtras", targets: ["ContainerizationExtras"]),
         .library(name: "ContainerizationArchive", targets: ["ContainerizationArchive"]),
         .executable(name: "cctl", targets: ["cctl"]),
+        .executable(name: "ContainerManagerGUI", targets: ["ContainerManagerGUI"]),
     ],
     dependencies: [
         .package(url: "https://github.com/apple/swift-log.git", from: "1.0.0"),
@@ -78,6 +79,17 @@ let package = Package(
                 "Containerization",
                 "ContainerizationOS",
             ]
+        ),
+        .executableTarget(
+            name: "ContainerManagerGUI",
+            dependencies: [
+                .product(name: "Logging", package: "swift-log"),
+                "Containerization",
+                "ContainerizationOCI",
+                "ContainerizationOS",
+                "ContainerizationExtras",
+            ],
+            path: "Sources/ContainerManagerGUI"
         ),
         .executableTarget(
             name: "containerization-integration",
