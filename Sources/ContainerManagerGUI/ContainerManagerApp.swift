@@ -28,6 +28,8 @@ struct ContainerManagerApp: App {
                 .environment(containerService)
                 .frame(minWidth: 900, minHeight: 600)
                 .task {
+                    // Auto-detect kernel/vmlinux from the repo's kernel/ directory
+                    appState.autoDetectKernel()
                     await containerService.initialize(appState: appState)
                 }
         }

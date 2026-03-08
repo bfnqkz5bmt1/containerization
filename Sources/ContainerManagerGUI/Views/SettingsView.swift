@@ -54,9 +54,10 @@ struct SettingsView: View {
 
         return Form {
             Section("Kernel") {
-                VStack(alignment: .leading, spacing: 8) {
+                VStack(alignment: .leading, spacing: 10) {
+                    // Path field + Browse button
                     HStack {
-                        TextField("Path to Linux kernel binary", text: $appState.kernelPath)
+                        TextField("kernel/vmlinux", text: $appState.kernelPath)
                             .textFieldStyle(.roundedBorder)
                             .monospaced()
 
@@ -65,33 +66,106 @@ struct SettingsView: View {
                             panel.canChooseFiles = true
                             panel.canChooseDirectories = false
                             panel.allowsMultipleSelection = false
-                            panel.title = "Select Linux Kernel Binary"
+                            panel.title = "Select Linux Kernel Binary (vmlinux)"
+                            panel.message = "Select the vmlinux file built from the kernel/ directory"
                             if panel.runModal() == .OK, let url = panel.url {
                                 appState.kernelPath = url.path
                             }
                         }
                     }
 
+                    // Status indicator
                     if appState.kernelPath.isEmpty {
-                        Label("No kernel configured. Download a kernel from the Apple containerization project.", systemImage: "exclamationmark.triangle")
-                            .font(.caption)
-                            .foregroundStyle(.orange)
+                        Label(
+                            "No kernel found. Build one from the kernel/ directory (see below).",
+                            systemImage: "exclamationmark.triangle.fill"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.orange)
                     } else if !FileManager.default.fileExists(atPath: appState.kernelPath) {
-                        Label("Kernel not found at path: \(appState.kernelPath)", systemImage: "xmark.circle")
-                            .font(.caption)
-                            .foregroundStyle(.red)
+                        Label(
+                            "Kernel not found at: \(appState.kernelPath)",
+                            systemImage: "xmark.circle.fill"
+                        )
+                        .font(.caption)
+                        .foregroundStyle(.red)
                     } else {
-                        Label("Kernel found.", systemImage: "checkmark.circle.fill")
-                            .font(.caption)
-                            .foregroundStyle(.green)
+                        HStack(spacing: 6) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(.green)
+                            VStack(alignment: .leading, spacing: 1) {
+                                Text("Kernel found.")
+                                    .font(.caption)
+                                    .foregroundStyle(.green)
+                                Text(appState.kernelPath)
+                                    .font(.system(.caption2, design: .monospaced))
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(2)
+                            }
+                        }
                     }
 
-                    Button("Download Kernel…") {
-                        NSWorkspace.shared.open(
-                            URL(string: "https://github.com/apple/containerization/releases")!
-                        )
+                    Divider()
+
+                    // Build instructions
+                    VStack(alignment: .leading, spacing: 6) {
+                        Label("How to build the kernel", systemImage: "hammer")
+                            .font(.caption)
+                            .fontWeight(.semibold)
+                            .foregroundStyle(.secondary)
+
+                        Text("The project ships a custom optimized Linux kernel config in the **kernel/** directory. Build it once with:")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        HStack(spacing: 6) {
+                            Text("cd kernel && make")
+                                .font(.system(.caption, design: .monospaced))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 4)
+                                .background(.quinary, in: RoundedRectangle(cornerRadius: 5))
+                            CopyButton(text: "cd kernel && make")
+                        }
+
+                        Text("Output: **kernel/vmlinux** — the app will auto-detect this path on next launch.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+
+                        HStack(spacing: 10) {
+                            Button("Re-detect Kernel") {
+                                // Clear and re-run auto-detection
+                                let saved = appState.kernelPath
+                                appState.kernelPath = ""
+                                appState.autoDetectKernel()
+                                if appState.kernelPath.isEmpty {
+                                    appState.kernelPath = saved
+                                }
+                            }
+                            .font(.caption)
+                            .buttonStyle(.bordered)
+
+                            Button("Open kernel/ in Finder") {
+                                // Navigate to kernel/ relative to executable (walk up from build dir)
+                                let execURL = URL(fileURLWithPath: CommandLine.arguments[0])
+                                    .standardized.resolvingSymlinksInPath()
+                                var dir = execURL.deletingLastPathComponent()
+                                for _ in 0..<6 {
+                                    let candidate = dir.appendingPathComponent("kernel")
+                                    if FileManager.default.fileExists(atPath: candidate.path) {
+                                        NSWorkspace.shared.open(candidate)
+                                        return
+                                    }
+                                    dir = dir.deletingLastPathComponent()
+                                }
+                                // fallback: open releases page
+                                NSWorkspace.shared.open(
+                                    URL(string: "https://github.com/apple/containerization/releases")!
+                                )
+                            }
+                            .font(.caption)
+                            .buttonStyle(.bordered)
+                        }
                     }
-                    .font(.caption)
                 }
             }
 

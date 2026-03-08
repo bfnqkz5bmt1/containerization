@@ -100,6 +100,64 @@ final class AppState {
         !kernelPath.isEmpty && FileManager.default.fileExists(atPath: kernelPath)
     }
 
+    // MARK: - Kernel Auto-Detection
+
+    /// Searches well-known locations for the project's built kernel (kernel/vmlinux).
+    /// Called on first launch if no kernel is configured yet.
+    func autoDetectKernel() {
+        guard kernelPath.isEmpty || !FileManager.default.fileExists(atPath: kernelPath) else {
+            return // already have a valid kernel configured
+        }
+
+        if let found = findKernel() {
+            kernelPath = found
+        }
+    }
+
+    /// Returns the path to `kernel/vmlinux` if found in any of the search locations.
+    ///
+    /// Search order:
+    /// 1. Alongside the running executable (dev build: .build/arm64-apple-macosx/debug/)
+    /// 2. Two directories up from the executable, then `kernel/vmlinux`
+    ///    (covers `.build/<arch>/debug/ContainerManagerGUI` → repo root → `kernel/vmlinux`)
+    /// 3. Application Support: `~/Library/Application Support/com.apple.containerization/vmlinux`
+    /// 4. User's home directory `~/vmlinux`
+    private func findKernel() -> String? {
+        var candidates: [URL] = []
+
+        // 1. Resolve the repo root from the executable path.
+        //    Typical SPM build: <repo>/.build/<arch>/<config>/ContainerManagerGUI
+        //    Walk up until we find the `kernel/` directory.
+        let execURL = URL(fileURLWithPath: CommandLine.arguments[0])
+            .standardized.resolvingSymlinksInPath()
+
+        var dir = execURL.deletingLastPathComponent()
+        for _ in 0..<6 {
+            let kernelVmlinux = dir.appendingPathComponent("kernel/vmlinux")
+            candidates.append(kernelVmlinux)
+            dir = dir.deletingLastPathComponent()
+        }
+
+        // 2. Application Support directory (matches cctl's appRoot convention)
+        if let appSupport = FileManager.default.urls(
+            for: .applicationSupportDirectory,
+            in: .userDomainMask
+        ).first {
+            candidates.append(
+                appSupport.appendingPathComponent("com.apple.containerization/vmlinux")
+            )
+        }
+
+        // 3. Home directory fallback
+        candidates.append(
+            FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("vmlinux")
+        )
+
+        return candidates
+            .map { $0.path }
+            .first { FileManager.default.fileExists(atPath: $0) }
+    }
+
     func showError(title: String, message: String) {
         alertTitle = title
         alertMessage = message
